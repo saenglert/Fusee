@@ -3,6 +3,7 @@ using OpenTK;
 using OpenTK.Input;
 using Fusee.Engine.Common;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 
@@ -36,6 +37,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         private GameWindow _gameWindow;
         private KeyboardDeviceImp _keyboard;
         private MouseDeviceImp _mouse;
+        private GameControllerImp _controller = new GameControllerImp();
 
         /// <summary>
         /// Devices supported by this driver: One mouse and one keyboard.
@@ -613,5 +615,89 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
                 });
             }
         }
+    }
+
+    /// <summary>
+    /// GameController input device implementation for Desktop and Android platforms
+    /// </summary>
+    public class GameControllerImp : IInputDeviceImp
+    {
+
+        /// <summary>
+        /// Maximum number of gamepad controllers that will be checked for availability.
+        /// </summary>
+        private static int _maxControllers = 4;
+       
+        /// <summary>
+        /// The amount of axis this gamepad controller has got.
+        /// </summary>
+        private int _axisCount;
+
+        /// <summary>
+        /// Initializes the gamecontroller
+        /// </summary>
+        public GameControllerImp()
+        {
+            GamePadCapabilities _gamePadCapabilities = default (GamePadCapabilities);
+
+            for (int i = 0; i < _maxControllers; i++)
+            {
+                GamePadCapabilities _currenCapabilities = GamePad.GetCapabilities(i);
+                Debug.WriteLine(_currenCapabilities.ToString());
+            }
+
+            if (Object.Equals(_gamePadCapabilities, default(GamePadCapabilities)))
+            {
+                throw new Exception("No valid gamepad controllor device found");
+            }
+
+            //this.SetAxisCount(_gamePadCapabilities);
+
+        }
+        /// <summary>
+        /// Returns a (hopefully) unique ID for this driver. Uniqueness is granted by using the 
+        /// full class name (including namespace).
+        /// </summary>
+        public string Id => GetType().FullName;
+
+        /// <summary>
+        /// Short description string for this device to be used in dialogs.
+        /// </summary>
+        public string Desc => "Standard GameController implementation.";
+
+        /// <summary>
+        /// Returns <see cref="DeviceCategory.GameController"/>, just because it's a gamecontroller.
+        /// </summary>
+        public DeviceCategory Category => DeviceCategory.GameController;
+
+        /// <summary>
+        /// Sets the correct value for 
+        /// </summary>
+        private void SetAxisCount(GamePadCapabilities _capabilities)
+        {
+            
+        }
+
+        /// <summary>
+        /// Number of axes. Here five: "X-Axis" and "Y-Axis" on the left stick, "X-Rotation" and "Y-Rotation" on the right stick
+        /// and "Z-Axis" on the left and right triggers.
+        /// </summary>
+        public int AxesCount => 5;
+
+        public IEnumerable<AxisImpDescription> AxisImpDesc { get; }
+        public float GetAxis(int iAxisId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public event EventHandler<AxisValueChangedArgs> AxisValueChanged;
+        public int ButtonCount { get; }
+        public IEnumerable<ButtonImpDescription> ButtonImpDesc { get; }
+        public bool GetButton(int iButtonId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public event EventHandler<ButtonValueChangedArgs> ButtonValueChanged;
     }
 }
