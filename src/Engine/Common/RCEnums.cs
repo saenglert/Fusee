@@ -514,6 +514,19 @@ namespace Fusee.Engine.Common
 #pragma warning restore 1591
     }
 
+    /// <summary>
+    /// Game controller axis ids
+    /// </summary>
+    public enum ControllerAxis
+    {
+#pragma warning disable 1591
+        LeftX,
+        LeftY,
+        RightX,
+        RightY,
+        Z
+#pragma warning restore 1591
+    }
 
     /// <summary>
     /// Game controller button Ids.
@@ -526,11 +539,18 @@ namespace Fusee.Engine.Common
         C = 2,
         D = 3,
         E = 4,
+        X = 5,
+        Y = 6,
+        
 
         R1,
         R2,
         L1,
         L2,
+
+        Start,
+        Back,
+        Home,
         //...
 
         FirstUserButton,
