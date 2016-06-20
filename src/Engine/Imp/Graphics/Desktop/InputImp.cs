@@ -1,10 +1,12 @@
 ﻿using System;
+using System.CodeDom;
 using OpenTK;
 using OpenTK.Input;
 using Fusee.Engine.Common;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Windows.Forms.VisualStyles;
 
 
 namespace Fusee.Engine.Imp.Graphics.Desktop
@@ -32,12 +34,28 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
             _keyboard = new KeyboardDeviceImp(_gameWindow);
             _mouse = new MouseDeviceImp(_gameWindow);
+            _controller = new GameControllerDeviceImp(0, _gameWindow);
         }
 
         private GameWindow _gameWindow;
         private KeyboardDeviceImp _keyboard;
         private MouseDeviceImp _mouse;
-        private GameControllerImp _controller = new GameControllerImp();
+        private List<GameControllerDeviceImp> _controllers;
+        private GameControllerDeviceImp _controller;
+        const int MaxNumberGameControllers = 4;
+
+        private List<GameControllerDeviceImp> searchGameControllers(GameWindow gameWindow)
+        {
+            List<GameControllerDeviceImp> controllers = new List<GameControllerDeviceImp>();
+            for (int i = 0; i < MaxNumberGameControllers; i++)
+            {
+                GamePadCapabilities gamePadCapabilities = GamePad.GetCapabilities(i);
+                if (gamePadCapabilities.IsConnected)
+                    controllers.Add(new GameControllerDeviceImp(i, gameWindow));
+            }
+
+            return controllers;
+        }
 
         /// <summary>
         /// Devices supported by this driver: One mouse and one keyboard.
@@ -48,6 +66,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             {
                 yield return _mouse;
                 yield return _keyboard;
+                yield return _controller;
             }
         }
 
@@ -617,43 +636,204 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         }
     }
 
-    /// <summary>
+   /// <summary>
     /// GameController input device implementation for Desktop and Android platforms
     /// </summary>
-    public class GameControllerImp : IInputDeviceImp
-    {
-
-        /// <summary>
-        /// Maximum number of gamepad controllers that will be checked for availability.
-        /// </summary>
-        private static int _maxControllers = 4;
-       
-        /// <summary>
-        /// The amount of axis this gamepad controller has got.
-        /// </summary>
+    /// <param name="gameCapabilities">The <see cref="OpenTK.Input.GamePadCapabilities"/> capabilities of the controller.</param>
+    /// <param name="gameWindow">The game window providing the input.</param>
+    public class GameControllerDeviceImp : IInputDeviceImp
+   {
+       private GameWindow _gameWindow;
+       private int _gamepadIndex;
+       private GamePadState _state;
         private int _axisCount;
+        private List<AxisImpDescription> _axisImpDescriptions; 
+        private int _buttonCount;
+        private List<ButtonImpDescription> _buttonImpDescriptions;
 
-        /// <summary>
+       /// <summary>
         /// Initializes the gamecontroller
         /// </summary>
-        public GameControllerImp()
-        {
-            GamePadCapabilities _gamePadCapabilities = default (GamePadCapabilities);
+        public GameControllerDeviceImp(int index, GameWindow gameWindow)
+       {
+           this._gamepadIndex = index;
+           this._gameWindow = gameWindow;
+           GamePadCapabilities _controller = GamePad.GetCapabilities(this._gamepadIndex);
+           this._state = GamePad.GetState(this._gamepadIndex);
+            
+            if (!_controller.IsConnected)
+                throw new Exception("Given Controller is not connected");
 
-            for (int i = 0; i < _maxControllers; i++)
+            _axisCount = 0;
+            _axisImpDescriptions = new List<AxisImpDescription>();
+            this.SetAxisImpDescriptions(_controller);
+
+            _buttonCount = 0;
+            _buttonImpDescriptions = new List<ButtonImpDescription>();
+            this.SetButtonImpDescriptions(_controller);
+       }
+
+       private void SetAxisImpDescriptions(GamePadCapabilities controller)
+       {
+            if (controller.HasLeftXThumbStick)
             {
-                GamePadCapabilities _currenCapabilities = GamePad.GetCapabilities(i);
-                Debug.WriteLine(_currenCapabilities.ToString());
+                _axisCount++;
+                _axisImpDescriptions.Add(
+                    this.CreateAxisImpDescription("LeftX", (int) ControllerAxis.LeftX, AxisDirection.X, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinX, (int) ControllerAxis.MaxX, true)        
+                );
             }
 
-            if (Object.Equals(_gamePadCapabilities, default(GamePadCapabilities)))
+            if (controller.HasLeftYThumbStick)
             {
-                throw new Exception("No valid gamepad controllor device found");
+                _axisCount++;
+                _axisImpDescriptions.Add(
+                    this.CreateAxisImpDescription("LeftY", (int) ControllerAxis.LeftY, AxisDirection.Y, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinY, (int) ControllerAxis.MaxY, true)
+                );
             }
 
-            //this.SetAxisCount(_gamePadCapabilities);
+           if (controller.HasRightXThumbStick)
+           {
+                _axisCount++;
+                _axisImpDescriptions.Add(
+                    this.CreateAxisImpDescription("RightX", (int) ControllerAxis.RightX, AxisDirection.X, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinX, (int) ControllerAxis.MaxX, true)    
+                );
+           }
 
+           if (controller.HasRightYThumbStick)
+           {
+                _axisCount++;
+                _axisImpDescriptions.Add(
+                    this.CreateAxisImpDescription("RightY", (int) ControllerAxis.RightY, AxisDirection.Y, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinY, (int) ControllerAxis.MaxY, true)
+                );
+           }
         }
+
+       private void SetButtonImpDescriptions(GamePadCapabilities controller)
+       {
+            if (controller.HasDPadUpButton)
+            {
+                this.AddButton("DPadUp", (int) ControllerButton.DPadUp, true);
+            }
+
+            if (controller.HasDPadDownButton)
+            {
+                this.AddButton("DPadDown", (int) ControllerButton.DPadDown, true);
+            }
+
+            if (controller.HasDPadLeftButton)
+            {
+                this.AddButton("DPadLeft", (int) ControllerButton.DPadLeft, true);
+            }
+
+            if (controller.HasDPadRightButton)
+            {
+                this.AddButton("DPadRight", (int) ControllerButton.DPadRight, true);
+            }
+
+            if (controller.HasAButton)
+            {
+                this.AddButton("A", (int) ControllerButton.A, true);
+            }
+
+            if (controller.HasBButton)
+            {
+                this.AddButton("B", (int) ControllerButton.B, true);
+            }
+
+           if (controller.HasXButton)
+           {
+               this.AddButton("X", (int) ControllerButton.X, true);
+           }
+
+           if (controller.HasYButton)
+           {
+               this.AddButton("Y", (int) ControllerButton.Y, true);
+           }
+
+           if (controller.HasLeftStickButton)
+           {
+               this.AddButton("LStickButton", (int) ControllerButton.LStickButton, true);
+           }
+
+            if (controller.HasRightStickButton)
+            {
+                this.AddButton("RStickButton", (int)ControllerButton.RStickButton, true);
+            }
+
+            if (controller.HasLeftShoulderButton)
+            {
+                this.AddButton("LShoulderButton", (int)ControllerButton.LShoulderButton, true);
+            }
+
+            if (controller.HasLeftTrigger)
+            {
+                this.AddButton("LTrigger", (int)ControllerButton.LTrigger, true);
+            }
+
+            if (controller.HasRightShoulderButton)
+            {
+                this.AddButton("RShoulderButton", (int)ControllerButton.RShoulderButton, true);
+            }
+
+           if (controller.HasRightTrigger)
+           {
+               this.AddButton("RTrigger", (int) ControllerButton.RTrigger, true);
+           }
+
+            if (controller.HasBackButton)
+            {
+                this.AddButton("Back", (int) ControllerButton.Back, true);
+            }
+
+            if (controller.HasStartButton)
+            {
+                this.AddButton("Start", (int) ControllerButton.Start, true);
+            }
+
+            if (controller.HasBigButton)
+            {
+                this.AddButton("Home", (int) ControllerButton.Home, true);
+            }
+        }
+
+       private void UpdateState()
+       {
+           GamePadState newState = GamePad.GetState(this._gamepadIndex);
+           if (!_state.Equals(newState))
+           {
+               _state = newState;
+           }
+       }
+       private AxisImpDescription CreateAxisImpDescription(String name, int id, AxisDirection direction, AxisNature nature, AxisBoundedType boundedType, int minvalue, int maxvalue, bool poll)
+       {
+           return new AxisImpDescription{
+               AxisDesc = new AxisDescription()
+               {
+                   Name =  name,
+                   Id = id,
+                   Direction = direction,
+                   Nature = nature,
+                   Bounded = boundedType,
+                   MinValueOrAxis = minvalue,
+                   MaxValueOrAxis = maxvalue
+               },
+               PollAxis = poll
+           };
+       }
+
+       private void AddButton(String name, int id, bool poll)
+       {
+            _buttonCount++;
+            _buttonImpDescriptions.Add(new ButtonImpDescription
+            {
+                ButtonDesc = new ButtonDescription
+                {
+                    Name = name,
+                    Id = id
+                },
+                PollButton = poll
+            });
+       }
         /// <summary>
         /// Returns a (hopefully) unique ID for this driver. Uniqueness is granted by using the 
         /// full class name (including namespace).
@@ -671,33 +851,113 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         public DeviceCategory Category => DeviceCategory.GameController;
 
         /// <summary>
-        /// Sets the correct value for 
-        /// </summary>
-        private void SetAxisCount(GamePadCapabilities _capabilities)
-        {
-            
-        }
-
-        /// <summary>
         /// Number of axes. Here five: "X-Axis" and "Y-Axis" on the left stick, "X-Rotation" and "Y-Rotation" on the right stick
         /// and "Z-Axis" on the left and right triggers.
         /// </summary>
-        public int AxesCount => 5;
+        public int AxesCount => _axisCount;
 
-        public IEnumerable<AxisImpDescription> AxisImpDesc { get; }
+        public IEnumerable<AxisImpDescription> AxisImpDesc => _axisImpDescriptions;
+
         public float GetAxis(int iAxisId)
         {
-            throw new NotImplementedException();
+            this.UpdateState();
+            //Debug.WriteLine("Call received for Axis with ID " + iAxisId);
+            switch (iAxisId)
+            {
+                case (int)ControllerAxis.LeftX:
+                    //Debug.WriteLine(_state.ThumbSticks.Left.X);
+                    return _state.ThumbSticks.Left.X;
+                case (int)ControllerAxis.LeftY:
+                    //Debug.WriteLine(_state.ThumbSticks.Left.Y);
+                    return _state.ThumbSticks.Left.Y;
+                case (int)ControllerAxis.RightX:
+                    //Debug.WriteLine(_state.ThumbSticks.Right.X);
+                    return _state.ThumbSticks.Right.X;
+                case (int)ControllerAxis.RightY:
+                    //Debug.WriteLine(_state.ThumbSticks.Right.Y);
+                    return _state.ThumbSticks.Right.Y;
+                default:
+                    throw new Exception("Axis not found");
+            }
         }
 
         public event EventHandler<AxisValueChangedArgs> AxisValueChanged;
-        public int ButtonCount { get; }
-        public IEnumerable<ButtonImpDescription> ButtonImpDesc { get; }
+        public int ButtonCount => _buttonCount;
+        public IEnumerable<ButtonImpDescription> ButtonImpDesc => _buttonImpDescriptions;
         public bool GetButton(int iButtonId)
         {
-            throw new NotImplementedException();
+            this.UpdateState();
+            Debug.WriteLine("Call for Button with Id " + iButtonId);
+            switch (iButtonId)
+            {
+                case (int)ControllerButton.A:
+                    Debug.WriteLine("Call for Button A");
+                    return _state.Buttons.A == ButtonState.Pressed;
+                case (int)ControllerButton.B:
+                    return _state.Buttons.B == ButtonState.Pressed;
+                case (int)ControllerButton.X:
+                    return _state.Buttons.X == ButtonState.Pressed;
+                case (int)ControllerButton.Y:
+                    return _state.Buttons.Y == ButtonState.Pressed;
+                case (int)ControllerButton.DPadUp:
+                    return _state.DPad.Up == ButtonState.Pressed;
+                case (int)ControllerButton.DPadDown:
+                    return _state.DPad.Down == ButtonState.Pressed;
+                case (int)ControllerButton.DPadLeft:
+                    return _state.DPad.Left == ButtonState.Pressed;
+                case (int)ControllerButton.DPadRight:
+                    return _state.DPad.Right == ButtonState.Pressed;
+                case (int)ControllerButton.LStickButton:
+                    return _state.Buttons.LeftStick == ButtonState.Pressed;
+                case (int)ControllerButton.RStickButton:
+                    return _state.Buttons.RightStick == ButtonState.Pressed;
+                case (int)ControllerButton.RShoulderButton:
+                    return _state.Buttons.RightShoulder == ButtonState.Pressed;
+                case (int)ControllerButton.RTrigger:
+                    return _state.Triggers.Left >= 0.5f;
+                case (int)ControllerButton.LShoulderButton:
+                    return _state.Buttons.LeftShoulder == ButtonState.Pressed;
+                case (int)ControllerButton.LTrigger:
+                    return _state.Triggers.Left >= 0.5;
+                case (int)ControllerButton.Start:
+                    return _state.Buttons.Start == ButtonState.Pressed;
+                case (int)ControllerButton.Back:
+                    return _state.Buttons.Back == ButtonState.Pressed;
+                case (int)ControllerButton.Home:
+                    return _state.Buttons.BigButton == ButtonState.Pressed;
+                default:
+                    throw new Exception("Button not found");
+            }
         }
 
         public event EventHandler<ButtonValueChangedArgs> ButtonValueChanged;
+
+       protected void OnButtonValueChanged(object sender, ButtonValueChangedArgs buttonArgs)
+       {
+            ButtonDescription btnDesc;
+            if (ButtonValueChanged != null && this.ButtonExistsOnDevice(buttonArgs.Button.Id, out btnDesc))
+            {
+                ButtonValueChanged(this, new ButtonValueChangedArgs
+                {
+                    Pressed = false,
+                    Button = btnDesc
+                });
+            }
+        }
+
+       private bool ButtonExistsOnDevice(int buttonId, out ButtonDescription btnDesc)
+       {
+           foreach (var button in ButtonImpDesc)
+           {
+               if (button.ButtonDesc.Id == buttonId)
+               {
+                   btnDesc = button.ButtonDesc;
+                   return true;
+               }
+           }
+
+           btnDesc = new ButtonDescription();
+           return false;
+       }
     }
 }
