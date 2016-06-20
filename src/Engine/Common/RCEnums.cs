@@ -524,7 +524,14 @@ namespace Fusee.Engine.Common
         LeftY,
         RightX,
         RightY,
-        Z
+        Z,
+
+        MinX,
+        MaxX,
+        MinY,
+        MaxY,
+        MinZ,
+        MaxZ,
 #pragma warning restore 1591
     }
 
@@ -542,11 +549,18 @@ namespace Fusee.Engine.Common
         X = 5,
         Y = 6,
         
+        DPadUp,
+        DPadDown,
+        DPadLeft,
+        DPadRight,
 
-        R1,
-        R2,
-        L1,
-        L2,
+        LStickButton,
+        RStickButton,
+
+        RShoulderButton,
+        RTrigger,
+        LShoulderButton,
+        LTrigger,
 
         Start,
         Back,
