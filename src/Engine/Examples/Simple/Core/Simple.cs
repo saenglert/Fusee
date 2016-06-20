@@ -1,6 +1,7 @@
 ﻿#define GUI_SIMPLE
 
 using System;
+using System.Diagnostics;
 using Fusee.Base.Common;
 using Fusee.Base.Core;
 using Fusee.Engine.Common;
@@ -121,6 +122,11 @@ namespace Fusee.Engine.Examples.Simple.Core
                 }
             }
 
+            if (Gamepad.GetButton(ControllerButton.A))
+            {
+                _angleVelHorz = -RotationSpeed * Gamepad.GetAxis(ControllerAxis.LeftX) * DeltaTime;
+                _angleVelVert = -RotationSpeed * Gamepad.GetAxis(ControllerAxis.LeftY) * DeltaTime;
+            }
 
             _angleHorz += _angleVelHorz;
             _angleVert += _angleVelVert;
