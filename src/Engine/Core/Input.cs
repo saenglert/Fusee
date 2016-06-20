@@ -38,8 +38,8 @@ namespace Fusee.Engine.Core
     /// object to pass around (although there is no such use case in FUSEE code at all).
     /// Use the static access in all other cases to reduce typing Input.Instance
     /// over and over again. Use <code>using static Fusee.Engine.Core.Input</code> to
-    /// directly access <see cref="Keyboard"/>, <see cref="Mouse"/> and <see cref="Touch"/>
-    /// without even typing a namespace or classname.
+    /// directly access <see cref="Keyboard"/>, <see cref="Mouse"/>, <see cref="Touch"/>
+    /// and <see cref="GamePad"/> without even typing a namespace or classname.
     /// </remarks>
     public class Input
     {
@@ -188,6 +188,9 @@ namespace Fusee.Engine.Core
         /// </remarks>
         public static TouchDevice Touch => Instance.TouchInput;
 
+        public GamepadDevice GamepadInput => GetInputDevice<GamepadDevice>();
+
+        public static GamepadDevice Gamepad => Instance.GamepadInput;
 
         /// <summary>
         /// Occurs when a device such as a gamepad is connected.
@@ -267,6 +270,7 @@ namespace Fusee.Engine.Core
             RegisterInputDeviceType(new MatchFunc(delegate(IInputDeviceImp imp) { return imp.Category == DeviceCategory.Mouse; }),  new CreatorFunc(delegate(IInputDeviceImp imp) { return new MouseDevice(imp);}));
             RegisterInputDeviceType(new MatchFunc(delegate (IInputDeviceImp imp) { return imp.Category == DeviceCategory.Keyboard; }), new CreatorFunc(delegate (IInputDeviceImp imp) { return new KeyboardDevice(imp); }));
             RegisterInputDeviceType(new MatchFunc(delegate (IInputDeviceImp imp) { return imp.Category == DeviceCategory.Touch; }), new CreatorFunc(delegate (IInputDeviceImp imp) { return new TouchDevice(imp); }));
+            RegisterInputDeviceType(new MatchFunc(delegate (IInputDeviceImp imp) {return imp.Category == DeviceCategory.GameController; }), new CreatorFunc(delegate (IInputDeviceImp imp) { return new GamepadDevice(imp);}));
             // RegisterInputDeviceType(imp => imp.Category == DeviceCategory.Keyboard, imp => new KeyboardDevice(imp));
             // RegisterInputDeviceType(imp => imp.Category == DeviceCategory.Touch,    imp => new TouchDevice(imp));
         }
