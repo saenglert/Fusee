@@ -188,6 +188,10 @@ namespace Fusee.Engine.Core
         /// </remarks>
         public static TouchDevice Touch => Instance.TouchInput;
 
+        public IEnumerable<GamepadDevice> GamepadInputs => GetInputDevices<GamepadDevice>();
+
+        public static IEnumerable<GamepadDevice> Gamepads => Instance.GamepadInputs;
+
         public GamepadDevice GamepadInput => GetInputDevice<GamepadDevice>();
 
         public static GamepadDevice Gamepad => Instance.GamepadInput;
@@ -432,6 +436,8 @@ namespace Fusee.Engine.Core
         /// </summary>
         public void PreRender()
         {
+            UpdateInputDevices();
+      
             foreach (var inputDevice in InputDevices)
             {
                 inputDevice.PreRender();
@@ -466,6 +472,19 @@ namespace Fusee.Engine.Core
                 driver.Dispose();
             }
             _inputDrivers.Clear();
+        }
+
+        /// <summmary>
+        /// Called by Input.PreRender() to check on the latest updates of connected input devices
+        /// </summmary>
+        private void UpdateInputDevices()
+        {
+            List<GamepadDevice> gamepads = new List<GamepadDevice>(GetInputDevices<GamepadDevice>());
+
+            foreach (var gamepad in gamepads)
+            {
+                
+            }
         }
     }
 

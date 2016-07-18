@@ -34,7 +34,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
             _keyboard = new KeyboardDeviceImp(_gameWindow);
             _mouse = new MouseDeviceImp(_gameWindow);
-            _controller = new GameControllerDeviceImp(0, _gameWindow);
+            _controllers = searchGameControllers(_gameWindow);
         }
 
         private GameWindow _gameWindow;
@@ -66,7 +66,10 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             {
                 yield return _mouse;
                 yield return _keyboard;
-                yield return _controller;
+                foreach (var controller in _controllers)
+                {
+                    yield return controller;
+                };
             }
         }
 
@@ -637,25 +640,26 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
     }
 
    /// <summary>
-    /// GameController input device implementation for Desktop and Android platforms
+    /// Gamepad Controller input device implementation for Desktop and Android platforms
     /// </summary>
     /// <param name="gameCapabilities">The <see cref="OpenTK.Input.GamePadCapabilities"/> capabilities of the controller.</param>
     /// <param name="gameWindow">The game window providing the input.</param>
     public class GameControllerDeviceImp : IInputDeviceImp
    {
-       private GameWindow _gameWindow;
-       private int _gamepadIndex;
-       private GamePadState _state;
+        private GameWindow _gameWindow;
+        private int _gamepadIndex;
+        private GamePadState _state;
         private int _axisCount;
         private List<AxisImpDescription> _axisImpDescriptions; 
         private int _buttonCount;
         private List<ButtonImpDescription> _buttonImpDescriptions;
 
-       /// <summary>
+        /// <summary>
         /// Initializes the gamecontroller
         /// </summary>
         public GameControllerDeviceImp(int index, GameWindow gameWindow)
        {
+            Debug.WriteLine("Creating Gamepad with ID " + index);
            this._gamepadIndex = index;
            this._gameWindow = gameWindow;
            GamePadCapabilities _controller = GamePad.GetCapabilities(this._gamepadIndex);
@@ -708,102 +712,6 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
            }
         }
 
-       private void SetButtonImpDescriptions(GamePadCapabilities controller)
-       {
-            if (controller.HasDPadUpButton)
-            {
-                this.AddButton("DPadUp", (int) ControllerButton.DPadUp, true);
-            }
-
-            if (controller.HasDPadDownButton)
-            {
-                this.AddButton("DPadDown", (int) ControllerButton.DPadDown, true);
-            }
-
-            if (controller.HasDPadLeftButton)
-            {
-                this.AddButton("DPadLeft", (int) ControllerButton.DPadLeft, true);
-            }
-
-            if (controller.HasDPadRightButton)
-            {
-                this.AddButton("DPadRight", (int) ControllerButton.DPadRight, true);
-            }
-
-            if (controller.HasAButton)
-            {
-                this.AddButton("A", (int) ControllerButton.A, true);
-            }
-
-            if (controller.HasBButton)
-            {
-                this.AddButton("B", (int) ControllerButton.B, true);
-            }
-
-           if (controller.HasXButton)
-           {
-               this.AddButton("X", (int) ControllerButton.X, true);
-           }
-
-           if (controller.HasYButton)
-           {
-               this.AddButton("Y", (int) ControllerButton.Y, true);
-           }
-
-           if (controller.HasLeftStickButton)
-           {
-               this.AddButton("LStickButton", (int) ControllerButton.LStickButton, true);
-           }
-
-            if (controller.HasRightStickButton)
-            {
-                this.AddButton("RStickButton", (int)ControllerButton.RStickButton, true);
-            }
-
-            if (controller.HasLeftShoulderButton)
-            {
-                this.AddButton("LShoulderButton", (int)ControllerButton.LShoulderButton, true);
-            }
-
-            if (controller.HasLeftTrigger)
-            {
-                this.AddButton("LTrigger", (int)ControllerButton.LTrigger, true);
-            }
-
-            if (controller.HasRightShoulderButton)
-            {
-                this.AddButton("RShoulderButton", (int)ControllerButton.RShoulderButton, true);
-            }
-
-           if (controller.HasRightTrigger)
-           {
-               this.AddButton("RTrigger", (int) ControllerButton.RTrigger, true);
-           }
-
-            if (controller.HasBackButton)
-            {
-                this.AddButton("Back", (int) ControllerButton.Back, true);
-            }
-
-            if (controller.HasStartButton)
-            {
-                this.AddButton("Start", (int) ControllerButton.Start, true);
-            }
-
-            if (controller.HasBigButton)
-            {
-                this.AddButton("Home", (int) ControllerButton.Home, true);
-            }
-        }
-
-       private void UpdateState()
-       {
-           GamePadState newState = GamePad.GetState(this._gamepadIndex);
-           if (!_state.Equals(newState))
-           {
-               _state = newState;
-           }
-       }
        private AxisImpDescription CreateAxisImpDescription(String name, int id, AxisDirection direction, AxisNature nature, AxisBoundedType boundedType, int minvalue, int maxvalue, bool poll)
        {
            return new AxisImpDescription{
@@ -821,7 +729,95 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
            };
        }
 
-       private void AddButton(String name, int id, bool poll)
+       private void SetButtonImpDescriptions(GamePadCapabilities controller)
+       {
+            if (controller.HasDPadUpButton)
+            {
+            this.CreateButtonImpDescription("DPadUp", (int) ControllerButton.DPadUp, true);
+            }
+
+            if (controller.HasDPadDownButton)
+            {
+            this.CreateButtonImpDescription("DPadDown", (int) ControllerButton.DPadDown, true);
+            }
+
+            if (controller.HasDPadLeftButton)
+            {
+            this.CreateButtonImpDescription("DPadLeft", (int) ControllerButton.DPadLeft, true);
+            }
+
+            if (controller.HasDPadRightButton)
+            {
+            this.CreateButtonImpDescription("DPadRight", (int) ControllerButton.DPadRight, true);
+            }
+
+            if (controller.HasAButton)
+            {
+            this.CreateButtonImpDescription("A", (int) ControllerButton.A, true);
+            }
+
+            if (controller.HasBButton)
+            {
+            this.CreateButtonImpDescription("B", (int) ControllerButton.B, true);
+            }
+
+            if (controller.HasXButton)
+            {
+            this.CreateButtonImpDescription("X", (int) ControllerButton.X, true);
+            }
+
+            if (controller.HasYButton)
+            {
+            this.CreateButtonImpDescription("Y", (int) ControllerButton.Y, true);
+            }
+
+            if (controller.HasLeftStickButton)
+            {
+            this.CreateButtonImpDescription("LStickButton", (int) ControllerButton.LStickButton, true);
+            }
+
+            if (controller.HasRightStickButton)
+            {
+            this.CreateButtonImpDescription("RStickButton", (int)ControllerButton.RStickButton, true);
+            }
+
+            if (controller.HasLeftShoulderButton)
+            {
+            this.CreateButtonImpDescription("LShoulderButton", (int)ControllerButton.LShoulderButton, true);
+            }
+
+            if (controller.HasLeftTrigger)
+            {
+            this.CreateButtonImpDescription("LTrigger", (int)ControllerButton.LTrigger, true);
+            }
+
+            if (controller.HasRightShoulderButton)
+            {
+            this.CreateButtonImpDescription("RShoulderButton", (int)ControllerButton.RShoulderButton, true);
+            }
+
+            if (controller.HasRightTrigger)
+            {
+            this.CreateButtonImpDescription("RTrigger", (int) ControllerButton.RTrigger, true);
+            }
+
+            if (controller.HasBackButton)
+            {
+            this.CreateButtonImpDescription("Back", (int) ControllerButton.Back, true);
+            }
+
+            if (controller.HasStartButton)
+            {
+            this.CreateButtonImpDescription("Start", (int) ControllerButton.Start, true);
+            }
+
+            if (controller.HasBigButton)
+            {
+            this.CreateButtonImpDescription("Home", (int) ControllerButton.Home, true);
+            }
+        }
+       
+       private void CreateButtonImpDescription(String name, int id, bool poll)
        {
             _buttonCount++;
             _buttonImpDescriptions.Add(new ButtonImpDescription
@@ -838,7 +834,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// Returns a (hopefully) unique ID for this driver. Uniqueness is granted by using the 
         /// full class name (including namespace).
         /// </summary>
-        public string Id => GetType().FullName;
+        public string Id => _gamepadIndex.ToString();
 
         /// <summary>
         /// Short description string for this device to be used in dialogs.
@@ -850,13 +846,16 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// </summary>
         public DeviceCategory Category => DeviceCategory.GameController;
 
-        /// <summary>
-        /// Number of axes. Here five: "X-Axis" and "Y-Axis" on the left stick, "X-Rotation" and "Y-Rotation" on the right stick
-        /// and "Z-Axis" on the left and right triggers.
-        /// </summary>
-        public int AxesCount => _axisCount;
+        private void UpdateState()
+        {
+            GamePadState newState = GamePad.GetState(this._gamepadIndex);
+            if (!newState.IsConnected)
+            {
 
-        public IEnumerable<AxisImpDescription> AxisImpDesc => _axisImpDescriptions;
+            }
+            else if (!_state.Equals(newState))
+                _state = newState;
+        }
 
         public float GetAxis(int iAxisId)
         {
@@ -881,17 +880,13 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             }
         }
 
-        public event EventHandler<AxisValueChangedArgs> AxisValueChanged;
-        public int ButtonCount => _buttonCount;
-        public IEnumerable<ButtonImpDescription> ButtonImpDesc => _buttonImpDescriptions;
         public bool GetButton(int iButtonId)
         {
             this.UpdateState();
-            Debug.WriteLine("Call for Button with Id " + iButtonId);
+            Debug.WriteLine("Controller " + _gamepadIndex + "  & Button " + iButtonId);
             switch (iButtonId)
             {
                 case (int)ControllerButton.A:
-                    Debug.WriteLine("Call for Button A");
                     return _state.Buttons.A == ButtonState.Pressed;
                 case (int)ControllerButton.B:
                     return _state.Buttons.B == ButtonState.Pressed;
@@ -930,9 +925,23 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             }
         }
 
+        /// <summary>
+        /// Number of axes. Here five: "X-Axis" and "Y-Axis" on the left stick, "X-Rotation" and "Y-Rotation" on the right stick
+        /// and "Z-Axis" on the left and right triggers.
+        /// </summary>
+        public int AxesCount => _axisCount;
+
+        public int ButtonCount => _buttonCount;
+
+        public IEnumerable<ButtonImpDescription> ButtonImpDesc => _buttonImpDescriptions;
+
+        public IEnumerable<AxisImpDescription> AxisImpDesc => _axisImpDescriptions;
+
+        public event EventHandler<AxisValueChangedArgs> AxisValueChanged;       
+
         public event EventHandler<ButtonValueChangedArgs> ButtonValueChanged;
 
-       protected void OnButtonValueChanged(object sender, ButtonValueChangedArgs buttonArgs)
+        protected void OnButtonValueChanged(object sender, ButtonValueChangedArgs buttonArgs)
        {
             ButtonDescription btnDesc;
             if (ButtonValueChanged != null && this.ButtonExistsOnDevice(buttonArgs.Button.Id, out btnDesc))
@@ -945,7 +954,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             }
         }
 
-       private bool ButtonExistsOnDevice(int buttonId, out ButtonDescription btnDesc)
+        private bool ButtonExistsOnDevice(int buttonId, out ButtonDescription btnDesc)
        {
            foreach (var button in ButtonImpDesc)
            {
