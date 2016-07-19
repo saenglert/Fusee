@@ -123,12 +123,6 @@ namespace Fusee.Engine.Examples.Simple.Core
                 }
             }
 
-            if (Gamepad.GetButton(ControllerButton.A))
-            {
-                _angleVelHorz = -RotationSpeed * Gamepad.GetAxis(ControllerAxis.LeftX) * DeltaTime;
-                _angleVelVert = -RotationSpeed * Gamepad.GetAxis(ControllerAxis.LeftY) * DeltaTime;
-            }
-
             var listPads = new List<GamepadDevice>(Gamepads);
             foreach (var gamepad in listPads)
             {
