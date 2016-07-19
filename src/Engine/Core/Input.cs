@@ -44,6 +44,7 @@ namespace Fusee.Engine.Core
     public class Input
     {
         private readonly Dictionary<string, IInputDriverImp> _inputDrivers;
+
         /// <summary>
         /// Retrieves the the input driver implementations currently registered.
         /// </summary>
@@ -55,6 +56,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
         public IEnumerable<IInputDriverImp> InputDrivers => _inputDrivers.Values;
+
         /// <summary>
         /// Retrieves the the input driver implementations currently registered.
         /// </summary>
@@ -68,7 +70,9 @@ namespace Fusee.Engine.Core
         public static IEnumerable<IInputDriverImp> Drivers => Instance._inputDrivers.Values;
 
         private readonly Dictionary<string, InputDevice> _inputDevices;
+
         public IEnumerable<InputDevice> InputDevices => _inputDevices.Values;
+
         public static IEnumerable<InputDevice> Devices => Instance._inputDevices.Values;
 
         private readonly List<SpecialDeviceCreator> _specialDeviceCreators;
@@ -84,6 +88,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
         public IEnumerable<TDevice> GetInputDevices<TDevice>() where TDevice : InputDevice => _inputDevices.Values.OfType<TDevice>();
+
         /// <summary>
         /// Gets the input devices of a certain type. Shortcut for
         /// <code>InputDevices.OfType&lt;TDevice&gt;()</code>
@@ -107,6 +112,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
        public TDevice GetInputDevice<TDevice>() where TDevice : InputDevice => _inputDevices.Values.OfType<TDevice>().FirstOrDefault();
+
         /// <summary>
         /// Gets the first input device of a certain type. Shortcut for
         /// <code>InputDevices.OfType&lt;TDevice&gt;().FirstOrDefault()</code>
@@ -130,6 +136,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
         public MouseDevice MouseInput => GetInputDevice<MouseDevice>();
+
         /// <summary>
         /// Retrieves the first mouse device (if present).
         /// </summary>
@@ -153,6 +160,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
         public KeyboardDevice KeyboardInput => GetInputDevice<KeyboardDevice>();
+
         /// <summary>
         /// Retrieves the first keyboard device (if present).
         /// </summary>
@@ -176,6 +184,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
         public TouchDevice TouchInput => GetInputDevice<TouchDevice>();
+
         /// <summary>
         /// Retrieves the first touch device (if present).
         /// </summary>
@@ -192,10 +201,6 @@ namespace Fusee.Engine.Core
 
         public static IEnumerable<GamepadDevice> Gamepads => Instance.GamepadInputs;
 
-        public GamepadDevice GamepadInput => GetInputDevice<GamepadDevice>();
-
-        public static GamepadDevice Gamepad => Instance.GamepadInput;
-
         /// <summary>
         /// Occurs when a device such as a gamepad is connected.
         /// </summary>
@@ -204,6 +209,7 @@ namespace Fusee.Engine.Core
         /// to the same functionality.
         /// </remarks>
         public event EventHandler<DeviceConnectionArgs> InputDeviceConnected;
+
         /// <summary>
         /// Occurs when a device such as a gamepad is connected.
         /// </summary>
@@ -436,8 +442,6 @@ namespace Fusee.Engine.Core
         /// </summary>
         public void PreRender()
         {
-            UpdateInputDevices();
-      
             foreach (var inputDevice in InputDevices)
             {
                 inputDevice.PreRender();
@@ -472,19 +476,6 @@ namespace Fusee.Engine.Core
                 driver.Dispose();
             }
             _inputDrivers.Clear();
-        }
-
-        /// <summmary>
-        /// Called by Input.PreRender() to check on the latest updates of connected input devices
-        /// </summmary>
-        private void UpdateInputDevices()
-        {
-            List<GamepadDevice> gamepads = new List<GamepadDevice>(GetInputDevices<GamepadDevice>());
-
-            foreach (var gamepad in gamepads)
-            {
-                
-            }
         }
     }
 
