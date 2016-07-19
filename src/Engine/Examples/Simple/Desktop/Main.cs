@@ -3,6 +3,7 @@ using Fusee.Base.Common;
 using Fusee.Base.Core;
 using Fusee.Base.Imp.Desktop;
 using Fusee.Engine.Core;
+using Fusee.Engine.Imp.Graphics.Desktop;
 using Fusee.Serialization;
 using FileMode = Fusee.Base.Common.FileMode;
 using Path = Fusee.Base.Common.Path;
@@ -50,6 +51,7 @@ namespace Fusee.Engine.Examples.Simple.Desktop
             app.ContextImplementor = new Fusee.Engine.Imp.Graphics.Desktop.RenderContextImp(app.CanvasImplementor);
             Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.RenderCanvasInputDriverImp(app.CanvasImplementor));
             Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.WindowsTouchInputDriverImp(app.CanvasImplementor));
+            Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.RenderCanvasGampadInputDriverImp());
             // app.InputImplementor = new Fusee.Engine.Imp.Graphics.Desktop.InputImp(app.CanvasImplementor);
             // app.AudioImplementor = new Fusee.Engine.Imp.Sound.Desktop.AudioImp();
             // app.NetworkImplementor = new Fusee.Engine.Imp.Network.Desktop.NetworkImp();

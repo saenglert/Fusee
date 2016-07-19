@@ -1,12 +1,10 @@
 ﻿using System;
-using System.CodeDom;
 using OpenTK;
 using OpenTK.Input;
 using Fusee.Engine.Common;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Windows.Forms.VisualStyles;
 
 
 namespace Fusee.Engine.Imp.Graphics.Desktop
@@ -34,28 +32,11 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
             _keyboard = new KeyboardDeviceImp(_gameWindow);
             _mouse = new MouseDeviceImp(_gameWindow);
-            _controllers = searchGameControllers(_gameWindow);
         }
 
         private GameWindow _gameWindow;
         private KeyboardDeviceImp _keyboard;
         private MouseDeviceImp _mouse;
-        private List<GameControllerDeviceImp> _controllers;
-        private GameControllerDeviceImp _controller;
-        const int MaxNumberGameControllers = 4;
-
-        private List<GameControllerDeviceImp> searchGameControllers(GameWindow gameWindow)
-        {
-            List<GameControllerDeviceImp> controllers = new List<GameControllerDeviceImp>();
-            for (int i = 0; i < MaxNumberGameControllers; i++)
-            {
-                GamePadCapabilities gamePadCapabilities = GamePad.GetCapabilities(i);
-                if (gamePadCapabilities.IsConnected)
-                    controllers.Add(new GameControllerDeviceImp(i, gameWindow));
-            }
-
-            return controllers;
-        }
 
         /// <summary>
         /// Devices supported by this driver: One mouse and one keyboard.
@@ -66,10 +47,6 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             {
                 yield return _mouse;
                 yield return _keyboard;
-                foreach (var controller in _controllers)
-                {
-                    yield return controller;
-                };
             }
         }
 
@@ -639,42 +616,138 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         }
     }
 
-   /// <summary>
+    /// <summary>
+    /// Driver Implementation using OpentTK for Gamepad Controller Input
+    /// </summary>
+    public class RenderCanvasGampadInputDriverImp : IInputDriverImp
+    {
+        private List<GameControllerDeviceImp> _controllers;
+        const int MaxNumberGameControllers = 4;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public RenderCanvasGampadInputDriverImp ()
+        {
+            _controllers = searchGameControllers();
+        }
+
+        private List<GameControllerDeviceImp> searchGameControllers()
+        {
+            List<GameControllerDeviceImp> controllers = new List<GameControllerDeviceImp>();
+            for (int i = 0; i < MaxNumberGameControllers; i++)
+            {
+                GamePadCapabilities gamePadCapabilities = GamePad.GetCapabilities(i);
+                if (gamePadCapabilities.IsConnected)
+                    controllers.Add(new GameControllerDeviceImp(i));
+            }
+
+            return controllers;
+        }
+
+        public IEnumerable<IInputDeviceImp> Devices => _controllers.Cast<IInputDeviceImp>();
+
+        public string DriverId => GetType().FullName;
+
+        public string DriverDesc {
+            get
+            {
+#if PLATFORM_DESKTOP
+                const string pf = "Desktop";
+#elif PLATFORM_ANDROID
+                const string pf = "Android";
+#endif
+                return "OpenTK Gamepad Controller input driver for " + pf;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public event EventHandler<NewDeviceImpConnectedArgs> NewDeviceConnected;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public event EventHandler<DeviceImpDisconnectedArgs> DeviceDisconnected;
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        /// <summary>
+        /// Part of the Dispose pattern.
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~RenderCanvasInputDriverImp() {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        /// <summary>
+        /// Part of the dispose pattern.
+        /// </summary>
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
+    }
+
+    /// <summary>
     /// Gamepad Controller input device implementation for Desktop and Android platforms
     /// </summary>
     /// <param name="gameCapabilities">The <see cref="OpenTK.Input.GamePadCapabilities"/> capabilities of the controller.</param>
     /// <param name="gameWindow">The game window providing the input.</param>
     public class GameControllerDeviceImp : IInputDeviceImp
    {
-        private GameWindow _gameWindow;
-        private int _gamepadIndex;
+        private readonly int _gamepadIndex;
         private GamePadState _state;
         private int _axisCount;
-        private List<AxisImpDescription> _axisImpDescriptions; 
+        private readonly List<AxisImpDescription> _axisImpDescriptions; 
         private int _buttonCount;
-        private List<ButtonImpDescription> _buttonImpDescriptions;
+        private readonly List<ButtonImpDescription> _buttonImpDescriptions;
 
         /// <summary>
         /// Initializes the gamecontroller
         /// </summary>
-        public GameControllerDeviceImp(int index, GameWindow gameWindow)
+        public GameControllerDeviceImp(int index)
        {
             Debug.WriteLine("Creating Gamepad with ID " + index);
-           this._gamepadIndex = index;
-           this._gameWindow = gameWindow;
-           GamePadCapabilities _controller = GamePad.GetCapabilities(this._gamepadIndex);
-           this._state = GamePad.GetState(this._gamepadIndex);
+           _gamepadIndex = index;
+           GamePadCapabilities controller = GamePad.GetCapabilities(_gamepadIndex);
+           _state = GamePad.GetState(_gamepadIndex);
             
-            if (!_controller.IsConnected)
+            if (!controller.IsConnected)
                 throw new Exception("Given Controller is not connected");
 
             _axisCount = 0;
             _axisImpDescriptions = new List<AxisImpDescription>();
-            this.SetAxisImpDescriptions(_controller);
+            SetAxisImpDescriptions(controller);
 
             _buttonCount = 0;
             _buttonImpDescriptions = new List<ButtonImpDescription>();
-            this.SetButtonImpDescriptions(_controller);
+            SetButtonImpDescriptions(controller);
        }
 
        private void SetAxisImpDescriptions(GamePadCapabilities controller)
@@ -683,7 +756,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             {
                 _axisCount++;
                 _axisImpDescriptions.Add(
-                    this.CreateAxisImpDescription("LeftX", (int) ControllerAxis.LeftX, AxisDirection.X, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinX, (int) ControllerAxis.MaxX, true)        
+                    CreateAxisImpDescription("LeftX", (int) ControllerAxis.LeftX, AxisDirection.X, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinX, (int) ControllerAxis.MaxX, true)        
                 );
             }
 
@@ -691,7 +764,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
             {
                 _axisCount++;
                 _axisImpDescriptions.Add(
-                    this.CreateAxisImpDescription("LeftY", (int) ControllerAxis.LeftY, AxisDirection.Y, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinY, (int) ControllerAxis.MaxY, true)
+                    CreateAxisImpDescription("LeftY", (int) ControllerAxis.LeftY, AxisDirection.Y, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinY, (int) ControllerAxis.MaxY, true)
                 );
             }
 
@@ -699,7 +772,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
            {
                 _axisCount++;
                 _axisImpDescriptions.Add(
-                    this.CreateAxisImpDescription("RightX", (int) ControllerAxis.RightX, AxisDirection.X, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinX, (int) ControllerAxis.MaxX, true)    
+                    CreateAxisImpDescription("RightX", (int) ControllerAxis.RightX, AxisDirection.X, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinX, (int) ControllerAxis.MaxX, true)    
                 );
            }
 
@@ -707,7 +780,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
            {
                 _axisCount++;
                 _axisImpDescriptions.Add(
-                    this.CreateAxisImpDescription("RightY", (int) ControllerAxis.RightY, AxisDirection.Y, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinY, (int) ControllerAxis.MaxY, true)
+                    CreateAxisImpDescription("RightY", (int) ControllerAxis.RightY, AxisDirection.Y, AxisNature.Position, AxisBoundedType.OtherAxis, (int) ControllerAxis.MinY, (int) ControllerAxis.MaxY, true)
                 );
            }
         }
@@ -733,87 +806,87 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
        {
             if (controller.HasDPadUpButton)
             {
-            this.CreateButtonImpDescription("DPadUp", (int) ControllerButton.DPadUp, true);
+            CreateButtonImpDescription("DPadUp", (int) ControllerButton.DPadUp, true);
             }
 
             if (controller.HasDPadDownButton)
             {
-            this.CreateButtonImpDescription("DPadDown", (int) ControllerButton.DPadDown, true);
+                CreateButtonImpDescription("DPadDown", (int) ControllerButton.DPadDown, true);
             }
 
             if (controller.HasDPadLeftButton)
             {
-            this.CreateButtonImpDescription("DPadLeft", (int) ControllerButton.DPadLeft, true);
+                CreateButtonImpDescription("DPadLeft", (int) ControllerButton.DPadLeft, true);
             }
 
             if (controller.HasDPadRightButton)
             {
-            this.CreateButtonImpDescription("DPadRight", (int) ControllerButton.DPadRight, true);
+                CreateButtonImpDescription("DPadRight", (int) ControllerButton.DPadRight, true);
             }
 
             if (controller.HasAButton)
             {
-            this.CreateButtonImpDescription("A", (int) ControllerButton.A, true);
+            CreateButtonImpDescription("A", (int) ControllerButton.A, true);
             }
 
             if (controller.HasBButton)
             {
-            this.CreateButtonImpDescription("B", (int) ControllerButton.B, true);
+                CreateButtonImpDescription("B", (int) ControllerButton.B, true);
             }
 
             if (controller.HasXButton)
             {
-            this.CreateButtonImpDescription("X", (int) ControllerButton.X, true);
+            CreateButtonImpDescription("X", (int) ControllerButton.X, true);
             }
 
             if (controller.HasYButton)
             {
-            this.CreateButtonImpDescription("Y", (int) ControllerButton.Y, true);
+                CreateButtonImpDescription("Y", (int) ControllerButton.Y, true);
             }
 
             if (controller.HasLeftStickButton)
             {
-            this.CreateButtonImpDescription("LStickButton", (int) ControllerButton.LStickButton, true);
+                CreateButtonImpDescription("LStickButton", (int) ControllerButton.LStickButton, true);
             }
 
             if (controller.HasRightStickButton)
             {
-            this.CreateButtonImpDescription("RStickButton", (int)ControllerButton.RStickButton, true);
+                CreateButtonImpDescription("RStickButton", (int)ControllerButton.RStickButton, true);
             }
 
             if (controller.HasLeftShoulderButton)
             {
-            this.CreateButtonImpDescription("LShoulderButton", (int)ControllerButton.LShoulderButton, true);
+                CreateButtonImpDescription("LShoulderButton", (int)ControllerButton.LShoulderButton, true);
             }
 
             if (controller.HasLeftTrigger)
             {
-            this.CreateButtonImpDescription("LTrigger", (int)ControllerButton.LTrigger, true);
+                CreateButtonImpDescription("LTrigger", (int)ControllerButton.LTrigger, true);
             }
 
             if (controller.HasRightShoulderButton)
             {
-            this.CreateButtonImpDescription("RShoulderButton", (int)ControllerButton.RShoulderButton, true);
+                CreateButtonImpDescription("RShoulderButton", (int)ControllerButton.RShoulderButton, true);
             }
 
             if (controller.HasRightTrigger)
             {
-            this.CreateButtonImpDescription("RTrigger", (int) ControllerButton.RTrigger, true);
+                CreateButtonImpDescription("RTrigger", (int) ControllerButton.RTrigger, true);
             }
 
             if (controller.HasBackButton)
             {
-            this.CreateButtonImpDescription("Back", (int) ControllerButton.Back, true);
+                CreateButtonImpDescription("Back", (int) ControllerButton.Back, true);
             }
 
             if (controller.HasStartButton)
             {
-            this.CreateButtonImpDescription("Start", (int) ControllerButton.Start, true);
+                CreateButtonImpDescription("Start", (int) ControllerButton.Start, true);
             }
 
             if (controller.HasBigButton)
             {
-            this.CreateButtonImpDescription("Home", (int) ControllerButton.Home, true);
+                CreateButtonImpDescription("Home", (int) ControllerButton.Home, true);
             }
         }
        
@@ -848,10 +921,12 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
         private void UpdateState()
         {
-            GamePadState newState = GamePad.GetState(this._gamepadIndex);
+            GamePadState newState = GamePad.GetState(_gamepadIndex);
+
+
             if (!newState.IsConnected)
             {
-
+                
             }
             else if (!_state.Equals(newState))
                 _state = newState;
@@ -859,7 +934,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
         public float GetAxis(int iAxisId)
         {
-            this.UpdateState();
+            UpdateState();
             //Debug.WriteLine("Call received for Axis with ID " + iAxisId);
             switch (iAxisId)
             {
@@ -882,7 +957,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
         public bool GetButton(int iButtonId)
         {
-            this.UpdateState();
+            UpdateState();
             Debug.WriteLine("Controller " + _gamepadIndex + "  & Button " + iButtonId);
             switch (iButtonId)
             {
@@ -937,10 +1012,21 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
 
         public IEnumerable<AxisImpDescription> AxisImpDesc => _axisImpDescriptions;
 
+        /// <summary>
+        /// Currently not implemented
+        /// </summary>
         public event EventHandler<AxisValueChangedArgs> AxisValueChanged;       
 
+        /// <summary>
+        /// Currently not implemented
+        /// </summary>
         public event EventHandler<ButtonValueChangedArgs> ButtonValueChanged;
 
+        /// <summary>
+        /// Currently not Implemented
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="buttonArgs"></param>
         protected void OnButtonValueChanged(object sender, ButtonValueChangedArgs buttonArgs)
        {
             ButtonDescription btnDesc;
