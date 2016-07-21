@@ -77,6 +77,11 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// </summary>
         public event EventHandler<DeviceImpDisconnectedArgs> DeviceDisconnected;
 
+        public void PreRender()
+        {
+            
+        }
+
         /// <summary>
         /// Not supported on this driver. Mouse and keyboard are considered to be connected all the time.
         /// You can register handlers but they will never get called.

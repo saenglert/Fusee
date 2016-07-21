@@ -79,6 +79,11 @@ namespace Fusee.Engine.Imp.Graphics.Android
         /// </summary>
         public event EventHandler<DeviceImpDisconnectedArgs> DeviceDisconnected;
 
+        public void PreRender()
+        {
+            
+        }
+
         /// <summary>
         /// Not supported on this driver. Devices supported here are considered to be connected all the time.
         /// You can register handlers but they will never get called.

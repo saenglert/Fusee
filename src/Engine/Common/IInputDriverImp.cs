@@ -82,5 +82,10 @@ namespace Fusee.Engine.Common
         /// Occurs when a device is disconnected such as a gamepad is plugged off from the system.
         /// </summary>
         event EventHandler<DeviceImpDisconnectedArgs> DeviceDisconnected;
+
+        /// <summary>
+        /// Called before rendering a frame to update inputs (for example to check if gamepads have been connected or disconnected)
+        /// </summary>
+        void PreRender();
     }
 }
