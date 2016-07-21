@@ -442,9 +442,17 @@ namespace Fusee.Engine.Core
         /// </summary>
         public void PreRender()
         {
+            foreach (var inputDriver in InputDrivers)
+            {
+                inputDriver.PreRender();
+            }
+
             foreach (var inputDevice in InputDevices)
             {
-                inputDevice.PreRender();
+                if (inputDevice.IsConnected)
+                {
+                    inputDevice.PreRender();
+                }
             }
         }
         /// <summary>
