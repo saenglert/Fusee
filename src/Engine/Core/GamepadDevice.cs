@@ -10,35 +10,30 @@ namespace Fusee.Engine.Core
         /// <summary>
         /// Contains a dictionary of the IDs used for the gamepads axes. Keys are IDs assigned by OpenTK, Values are assigend by Fusee
         /// </summary>
-        public readonly Dictionary<int, int> _axes;
+        public readonly Dictionary<int, int> Axes;
         /// <summary>
         /// Contains a dictionary of the IDs used for the gamepads axes. Keys are IDs assigned by OpenTK, Values are assigend by Fusee
         /// </summary>
-        public readonly Dictionary<int, int> _buttons;
-        /// <summary>
-        /// The ID of the gamepad as in the index of the device in OpenTKs list of connected gamepads
-        /// </summary>
-        public readonly string _id;
+        public readonly Dictionary<int, int> Buttons;
 
         public GamepadDevice(IInputDeviceImp inpDeviceImp) : base(inpDeviceImp)
         {
-            _axes = new Dictionary<int, int>();
-            _buttons = new Dictionary<int, int>();
-            _id = inpDeviceImp.Id;
+            Axes = new Dictionary<int, int>();
+            Buttons = new Dictionary<int, int>();
             foreach (var axis in inpDeviceImp.AxisImpDesc)
             {
-                int orgId = axis.AxisDesc.Id; // Assigned by OpenTK
-                int regId = RegisterVelocityAxis(axis.AxisDesc.Id).Id; // Assigned by Fusee
+                var orgId = axis.AxisDesc.Id; // Assigned by RCEnum
+                var regId = RegisterVelocityAxis(axis.AxisDesc.Id).Id; // Assigned by Fusee
 
-                _axes.Add(orgId, regId);
+                Axes.Add(orgId, regId);
             }
 
             foreach (var button in inpDeviceImp.ButtonImpDesc)
             {
-                int orgId = button.ButtonDesc.Id;
-                int regId = RegisterSingleButtonAxis(button.ButtonDesc.Id).Id;
+                var orgId = button.ButtonDesc.Id;
+                var regId = RegisterSingleButtonAxis(button.ButtonDesc.Id).Id;
                 
-                _buttons.Add(orgId, regId);
+                Buttons.Add(orgId, regId);
             }
         }
 

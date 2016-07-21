@@ -51,7 +51,7 @@ namespace Fusee.Engine.Examples.Simple.Desktop
             app.ContextImplementor = new Fusee.Engine.Imp.Graphics.Desktop.RenderContextImp(app.CanvasImplementor);
             Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.RenderCanvasInputDriverImp(app.CanvasImplementor));
             Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.WindowsTouchInputDriverImp(app.CanvasImplementor));
-            Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.RenderCanvasGampadInputDriverImp());
+            Input.AddDriverImp(new Fusee.Engine.Imp.Graphics.Desktop.GampadInputDriverImp());
             // app.InputImplementor = new Fusee.Engine.Imp.Graphics.Desktop.InputImp(app.CanvasImplementor);
             // app.AudioImplementor = new Fusee.Engine.Imp.Sound.Desktop.AudioImp();
             // app.NetworkImplementor = new Fusee.Engine.Imp.Network.Desktop.NetworkImp();

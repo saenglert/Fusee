@@ -82,6 +82,11 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// </summary>
         public event EventHandler<DeviceImpDisconnectedArgs> DeviceDisconnected;
 
+        public void PreRender()
+        {
+            
+        }
+
         /// <summary>
         /// Not supported on this driver. Mouse and keyboard are considered to be connected all the time.
         /// You can register handlers but they will never get called.
@@ -619,33 +624,71 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
     /// <summary>
     /// Driver Implementation using OpentTK for Gamepad Controller Input
     /// </summary>
-    public class RenderCanvasGampadInputDriverImp : IInputDriverImp
+    public class GampadInputDriverImp : IInputDriverImp
     {
-        private List<GameControllerDeviceImp> _controllers;
-        const int MaxNumberGameControllers = 4;
+        private readonly List<GameControllerDeviceImp> _controllers = new List<GameControllerDeviceImp>();
+        private const int MaxNumberGameControllers = 4;
 
         /// <summary>
-        /// 
+        /// Initializes Gamepad Controller Driver
         /// </summary>
-        public RenderCanvasGampadInputDriverImp ()
+        public GampadInputDriverImp ()
         {
-            _controllers = searchGameControllers();
+            SearchNewGamePadControllers();
         }
 
-        private List<GameControllerDeviceImp> searchGameControllers()
+        private void SearchNewGamePadControllers()
         {
-            List<GameControllerDeviceImp> controllers = new List<GameControllerDeviceImp>();
-            for (int i = 0; i < MaxNumberGameControllers; i++)
+            for (var i = 0; i < MaxNumberGameControllers; i++)
             {
                 GamePadCapabilities gamePadCapabilities = GamePad.GetCapabilities(i);
-                if (gamePadCapabilities.IsConnected)
-                    controllers.Add(new GameControllerDeviceImp(i));
+                if (gamePadCapabilities.IsConnected && !ContainsController(i))
+                {
+                    _controllers.Add(new GameControllerDeviceImp(i));
+                    if (NewDeviceConnected != null)
+                        NewDeviceConnected(this, new NewDeviceImpConnectedArgs()
+                        {
+                            InputDeviceImp = _controllers.ElementAt(_controllers.Count - 1)
+                        });
+                }
+                    
             }
-
-            return controllers;
         }
 
-        public IEnumerable<IInputDeviceImp> Devices => _controllers.Cast<IInputDeviceImp>();
+        private bool ContainsController(int index)
+        {
+            return _controllers.Any(controller => controller.GamepadIndex == index);
+        }
+
+        /// <summary>
+        /// Checks whether or not a gamepad controller has been disconnected
+        /// </summary>
+        private void CheckCurrentControllers()
+        {
+            foreach (var controller in _controllers)
+            {
+                controller.UpdateState();
+                if (controller.State.IsConnected) continue;
+                else if (DeviceDisconnected != null)
+                    DeviceDisconnected(this, new DeviceImpDisconnectedArgs()
+                    {
+                        Desc = controller.Desc,
+                        Id = controller.Id
+                    });
+            }
+
+            _controllers.RemoveAll(controller => !controller.State.IsConnected);
+        }
+
+        /// <summary>
+        /// The devices currently managed by this driver
+        /// </summary>
+        public IEnumerable<IInputDeviceImp> Devices
+        {
+            get {
+                return _controllers.Cast<IInputDeviceImp>();
+            }
+        }
 
         public string DriverId => GetType().FullName;
 
@@ -670,6 +713,15 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// 
         /// </summary>
         public event EventHandler<DeviceImpDisconnectedArgs> DeviceDisconnected;
+
+        /// <summary>
+        /// Checks if devices have been connected or disconnected
+        /// </summary>
+        public void PreRender()
+        {
+            CheckCurrentControllers();
+            SearchNewGamePadControllers();
+        }
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
@@ -717,12 +769,18 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
     /// <summary>
     /// Gamepad Controller input device implementation for Desktop and Android platforms
     /// </summary>
-    /// <param name="gameCapabilities">The <see cref="OpenTK.Input.GamePadCapabilities"/> capabilities of the controller.</param>
-    /// <param name="gameWindow">The game window providing the input.</param>
     public class GameControllerDeviceImp : IInputDeviceImp
-   {
-        private readonly int _gamepadIndex;
-        private GamePadState _state;
+    {
+        /// <summary>
+        /// The index at which this gamepad controller can be found using OpenTKs <see cref="GamePad"/>
+        /// </summary>
+        public readonly int GamepadIndex;
+
+        /// <summary>
+        /// The current state of the gamepad controllers axis, buttons and connection <see cref="GamePadState"/> 
+        /// </summary>
+        public GamePadState State;
+
         private int _axisCount;
         private readonly List<AxisImpDescription> _axisImpDescriptions; 
         private int _buttonCount;
@@ -731,23 +789,25 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// <summary>
         /// Initializes the gamecontroller
         /// </summary>
+        /// <param name="index">
+        /// The index at which this gamepad controller can be found using OpenTKs <see cref="GamePad"/>
+        /// </param>
         public GameControllerDeviceImp(int index)
        {
-            Debug.WriteLine("Creating Gamepad with ID " + index);
-           _gamepadIndex = index;
-           GamePadCapabilities controller = GamePad.GetCapabilities(_gamepadIndex);
-           _state = GamePad.GetState(_gamepadIndex);
-            
-            if (!controller.IsConnected)
+            GamepadIndex = index;
+            State = GamePad.GetState(GamepadIndex);
+
+            var gamePadCapabilities = GamePad.GetCapabilities(GamepadIndex);
+            if (!gamePadCapabilities.IsConnected)
                 throw new Exception("Given Controller is not connected");
 
             _axisCount = 0;
             _axisImpDescriptions = new List<AxisImpDescription>();
-            SetAxisImpDescriptions(controller);
+            SetAxisImpDescriptions(gamePadCapabilities);
 
             _buttonCount = 0;
             _buttonImpDescriptions = new List<ButtonImpDescription>();
-            SetButtonImpDescriptions(controller);
+            SetButtonImpDescriptions(gamePadCapabilities);
        }
 
        private void SetAxisImpDescriptions(GamePadCapabilities controller)
@@ -907,7 +967,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// Returns a (hopefully) unique ID for this driver. Uniqueness is granted by using the 
         /// full class name (including namespace).
         /// </summary>
-        public string Id => _gamepadIndex.ToString();
+        public string Id => GamepadIndex.ToString();
 
         /// <summary>
         /// Short description string for this device to be used in dialogs.
@@ -919,82 +979,88 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         /// </summary>
         public DeviceCategory Category => DeviceCategory.GameController;
 
-        private void UpdateState()
+        /// <summary>
+        /// Updates the state of the gamepad controller via <see cref="GamePad"/>
+        /// </summary>
+        public void UpdateState()
         {
-            GamePadState newState = GamePad.GetState(_gamepadIndex);
+            var newState = GamePad.GetState(GamepadIndex);
 
-
-            if (!newState.IsConnected)
-            {
-                
-            }
-            else if (!_state.Equals(newState))
-                _state = newState;
+            if (!State.Equals(newState))
+                State = newState;
         }
 
+        /// <summary>
+        /// Returns the value of the polled axis
+        /// </summary>
+        /// <param name="iAxisId">Id for the polled axis <see cref="ControllerAxis"/></param>
+        /// <returns></returns>
         public float GetAxis(int iAxisId)
         {
             UpdateState();
-            //Debug.WriteLine("Call received for Axis with ID " + iAxisId);
             switch (iAxisId)
             {
                 case (int)ControllerAxis.LeftX:
                     //Debug.WriteLine(_state.ThumbSticks.Left.X);
-                    return _state.ThumbSticks.Left.X;
+                    return State.ThumbSticks.Left.X;
                 case (int)ControllerAxis.LeftY:
                     //Debug.WriteLine(_state.ThumbSticks.Left.Y);
-                    return _state.ThumbSticks.Left.Y;
+                    return State.ThumbSticks.Left.Y;
                 case (int)ControllerAxis.RightX:
                     //Debug.WriteLine(_state.ThumbSticks.Right.X);
-                    return _state.ThumbSticks.Right.X;
+                    return State.ThumbSticks.Right.X;
                 case (int)ControllerAxis.RightY:
                     //Debug.WriteLine(_state.ThumbSticks.Right.Y);
-                    return _state.ThumbSticks.Right.Y;
+                    return State.ThumbSticks.Right.Y;
                 default:
                     throw new Exception("Axis not found");
             }
         }
 
+        /// <summary>
+        /// Returns the boolean value of the polled axis
+        /// </summary>
+        /// <param name="iButtonId">Id for the polled button <see cref="ControllerButton"/></param>
+        /// <returns></returns>
         public bool GetButton(int iButtonId)
         {
             UpdateState();
-            Debug.WriteLine("Controller " + _gamepadIndex + "  & Button " + iButtonId);
             switch (iButtonId)
             {
                 case (int)ControllerButton.A:
-                    return _state.Buttons.A == ButtonState.Pressed;
+                    return State.Buttons.A == ButtonState.Pressed;
                 case (int)ControllerButton.B:
-                    return _state.Buttons.B == ButtonState.Pressed;
+                    return State.Buttons.B == ButtonState.Pressed;
                 case (int)ControllerButton.X:
-                    return _state.Buttons.X == ButtonState.Pressed;
+                    return State.Buttons.X == ButtonState.Pressed;
                 case (int)ControllerButton.Y:
-                    return _state.Buttons.Y == ButtonState.Pressed;
+                    return State.Buttons.Y == ButtonState.Pressed;
                 case (int)ControllerButton.DPadUp:
-                    return _state.DPad.Up == ButtonState.Pressed;
+                    return State.DPad.Up == ButtonState.Pressed;
                 case (int)ControllerButton.DPadDown:
-                    return _state.DPad.Down == ButtonState.Pressed;
+                    return State.DPad.Down == ButtonState.Pressed;
                 case (int)ControllerButton.DPadLeft:
-                    return _state.DPad.Left == ButtonState.Pressed;
+                    return State.DPad.Left == ButtonState.Pressed;
                 case (int)ControllerButton.DPadRight:
-                    return _state.DPad.Right == ButtonState.Pressed;
+                    return State.DPad.Right == ButtonState.Pressed;
                 case (int)ControllerButton.LStickButton:
-                    return _state.Buttons.LeftStick == ButtonState.Pressed;
+                    return State.Buttons.LeftStick == ButtonState.Pressed;
                 case (int)ControllerButton.RStickButton:
-                    return _state.Buttons.RightStick == ButtonState.Pressed;
+                    return State.Buttons.RightStick == ButtonState.Pressed;
                 case (int)ControllerButton.RShoulderButton:
-                    return _state.Buttons.RightShoulder == ButtonState.Pressed;
+                    return State.Buttons.RightShoulder == ButtonState.Pressed;
                 case (int)ControllerButton.RTrigger:
-                    return _state.Triggers.Left >= 0.5f;
+                    return State.Triggers.Left >= 0.5f;
                 case (int)ControllerButton.LShoulderButton:
-                    return _state.Buttons.LeftShoulder == ButtonState.Pressed;
+                    return State.Buttons.LeftShoulder == ButtonState.Pressed;
                 case (int)ControllerButton.LTrigger:
-                    return _state.Triggers.Left >= 0.5;
+                    return State.Triggers.Left >= 0.5;
                 case (int)ControllerButton.Start:
-                    return _state.Buttons.Start == ButtonState.Pressed;
+                    return State.Buttons.Start == ButtonState.Pressed;
                 case (int)ControllerButton.Back:
-                    return _state.Buttons.Back == ButtonState.Pressed;
+                    return State.Buttons.Back == ButtonState.Pressed;
                 case (int)ControllerButton.Home:
-                    return _state.Buttons.BigButton == ButtonState.Pressed;
+                    return State.Buttons.BigButton == ButtonState.Pressed;
                 default:
                     throw new Exception("Button not found");
             }
@@ -1030,7 +1096,7 @@ namespace Fusee.Engine.Imp.Graphics.Desktop
         protected void OnButtonValueChanged(object sender, ButtonValueChangedArgs buttonArgs)
        {
             ButtonDescription btnDesc;
-            if (ButtonValueChanged != null && this.ButtonExistsOnDevice(buttonArgs.Button.Id, out btnDesc))
+            if (ButtonValueChanged != null && ButtonExistsOnDevice(buttonArgs.Button.Id, out btnDesc))
             {
                 ButtonValueChanged(this, new ButtonValueChangedArgs
                 {

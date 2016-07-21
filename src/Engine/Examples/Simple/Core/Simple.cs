@@ -126,10 +126,8 @@ namespace Fusee.Engine.Examples.Simple.Core
             var listPads = new List<GamepadDevice>(Gamepads);
             foreach (var gamepad in listPads)
             {
-                //Debug.WriteLine("Controller " + gamepad.Id);
                 if (gamepad.GetButton(ControllerButton.A))
                 {
-                    //Debug.WriteLine("A Button Pressed");
                     _angleVelHorz = -RotationSpeed*gamepad.GetAxis(ControllerAxis.LeftX)*DeltaTime;
                     _angleVelVert = -RotationSpeed*gamepad.GetAxis(ControllerAxis.LeftY)*DeltaTime;
                 }
